@@ -1,16 +1,29 @@
 package com.gereach.ledger.service;
 
+import com.gereach.ledger.bean.UserDetailsImpl;
 import com.gereach.ledger.bean.po.Role;
 import com.gereach.ledger.bean.po.User;
+import com.gereach.ledger.bean.web.JwtResponse;
+import com.gereach.ledger.bean.web.LoginRequest;
 import com.gereach.ledger.bean.web.SignupRequest;
 import com.gereach.ledger.repository.RoleRepository;
 import com.gereach.ledger.repository.UserRepository;
+import com.gereach.ledger.util.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class AuthService {
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     @Autowired
     private UserRepository userRepository;
@@ -20,6 +33,9 @@ public class AuthService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtUtils jwtUtils;
 
     public void registerUser(SignupRequest request) {
         // 检查用户名和邮箱是否已存在
@@ -42,5 +58,34 @@ public class AuthService {
         user.getRoles().add(userRole);
 
         userRepository.save(user);
+    }
+
+    public JwtResponse authenticateUser(LoginRequest request) {
+        // 执行认证逻辑
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getUsername(),
+                        request.getPassword()
+                )
+        );
+
+        // 生成 JWT Token
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        String jwtToken = jwtUtils.generateToken(userDetails);
+
+        // 获取用户角色列表
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        // 返回响应
+        return new JwtResponse(
+                jwtToken,
+                userDetails.getId(),
+                userDetails.getUsername(),
+                userDetails.getEmail(),
+                roles
+        );
     }
 }

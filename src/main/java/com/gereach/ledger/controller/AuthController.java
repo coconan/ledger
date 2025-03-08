@@ -1,5 +1,7 @@
 package com.gereach.ledger.controller;
 
+import com.gereach.ledger.bean.web.JwtResponse;
+import com.gereach.ledger.bean.web.LoginRequest;
 import com.gereach.ledger.bean.web.SignupRequest;
 import com.gereach.ledger.service.AuthService;
 import jakarta.validation.Valid;
@@ -21,5 +23,11 @@ public class AuthController {
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest request) {
         authService.registerUser(request);
         return ResponseEntity.ok("用户注册成功");
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest request) {
+        JwtResponse response = authService.authenticateUser(request);
+        return ResponseEntity.ok(response);
     }
 }
